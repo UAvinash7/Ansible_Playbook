@@ -1,0 +1,40 @@
+---
+- name: Windows Service Management Playbook
+  hosts: windows
+  gather_facts: false
+  vars:
+    target_service: "Spooler"  # Replace with your service name
+
+  tasks:
+    # 1. Check if the service exists and get its info
+    - name: Get information for {{ target_service }}
+      ansible.windows.win_service_info:
+        name: "{{ target_service }}"
+      register: service_info
+
+    # 2. Stop execution if the service does not exist
+    - name: Verify service existence
+      ansible.builtin.fail:
+        msg: "The service '{{ target_service }}' does not exist on this host."
+      when: not service_info.exists
+
+    # 3. Restart the service ONLY if it is not running
+    - name: Restart {{ target_service }} if it is not running
+      ansible.windows.win_service:
+        name: "{{ target_service }}"
+        state: restarted
+      when: service_info.services[0].state != 'running'
+      register: restart_result
+
+    # 4. Verify the service is running after the attempted restart
+    - name: Verify service state after restart
+      ansible.windows.win_service_info:
+        name: "{{ target_service }}"
+      register: final_check
+      failed_when: final_check.services[0].state != 'running'
+      when: restart_result.changed
+
+    - name: Success message
+      ansible.builtin.debug:
+        msg: "Service '{{ target_service }}' is verified as running."
+      when: final_check.services[0].state == 'running'
