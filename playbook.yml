@@ -12,13 +12,26 @@
         name: "{{ target_service }}"
       register: service_info
 
-    # 2. Stop execution if the service does not exist
+    # 2. Print success and STOP if already running
+    - name: Stop play if service is already running
+      block:
+        - name: Print success message
+          ansible.builtin.debug:
+            msg: "Service '{{ target_service }}' is already running. Stopping playbook."
+
+        - name: End play for this host
+          ansible.builtin.meta: end_host
+      when: 
+        - service_info.exists
+        - service_info.services[0].state == 'running'
+
+    # 3. Stop execution if the service does not exist
     - name: Verify service existence
       ansible.builtin.fail:
         msg: "The service '{{ target_service }}' does not exist on this host."
       when: not service_info.exists
 
-    # 3. Restart the service ONLY if it is not running
+    # 4. Restart the service ONLY if it is not running
     - name: Restart {{ target_service }} if it is not running
       ansible.windows.win_service:
         name: "{{ target_service }}"
@@ -26,7 +39,7 @@
       when: service_info.services[0].state != 'running'
       register: restart_result
 
-    # 4. Verify the service is running after the attempted restart
+    # 5. Verify the service is running after the attempted restart
     - name: Verify service state after restart
       ansible.windows.win_service_info:
         name: "{{ target_service }}"
