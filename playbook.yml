@@ -19,7 +19,7 @@
       when: not service_info.exists
 
 
-    # 3. Print success and STOP if already running
+    # 3. if service exists and already running -- stop with sucess msg
     - name: Stop play if service is already running
       block:
         - name: Print success message
