@@ -12,7 +12,14 @@
         name: "{{ target_service }}"
       register: service_info
 
-    # 2. Print success and STOP if already running
+    # 2. Stop execution if the service does not exist
+    - name: Verify service existence
+      ansible.builtin.fail:
+        msg: "The service '{{ target_service }}' does not exist on this host."
+      when: not service_info.exists
+
+
+    # 3. Print success and STOP if already running
     - name: Stop play if service is already running
       block:
         - name: Print success message
@@ -24,12 +31,7 @@
       when: 
         - service_info.exists
         - service_info.services[0].state == 'running'
-
-    # 3. Stop execution if the service does not exist
-    - name: Verify service existence
-      ansible.builtin.fail:
-        msg: "The service '{{ target_service }}' does not exist on this host."
-      when: not service_info.exists
+        
 
     # 4. Restart the service ONLY if it is not running
     - name: Restart {{ target_service }} if it is not running
